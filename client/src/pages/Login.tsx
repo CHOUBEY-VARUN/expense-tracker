@@ -20,6 +20,8 @@ function Login() {
     if (!result.ok) {
       console.log(data.message);
     } else {
+      localStorage.setItem("token", data.token);
+      localStorage.setItem("user", JSON.stringify(data.data));
       navigate("/");
     }
   };

@@ -19,7 +19,9 @@ function Register() {
 
     console.log("User registered:", data);
 
-    navigate("/login");
+    localStorage.setItem("token", data.token);
+    localStorage.setItem("user", JSON.stringify(data.data));
+    navigate("/");
   };
 
   return (

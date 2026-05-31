@@ -1,5 +1,6 @@
 import bcrypt from "bcrypt";
-import express from "express";
+import jwt from "jsonwebtoken";
+import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import { pool } from "./db";
@@ -10,6 +11,62 @@ const app = express();
 
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
+
+const JWT_SECRET = process.env.JWT_SECRET;
+
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET is missing in .env");
+}
+
+type TokenPayload = {
+  id: number;
+  username: string;
+};
+
+type AuthRequest = Request & {
+  user?: TokenPayload;
+};
+
+function createToken(user: TokenPayload) {
+  return jwt.sign(
+    {
+      id: user.id,
+      username: user.username,
+    },
+    JWT_SECRET,
+    {
+      expiresIn: process.env.JWT_EXPIRES_IN || "1h",
+    }
+  );
+}
+
+function verifyToken(req: AuthRequest, res: Response, next: NextFunction) {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader) {
+    return res.status(401).json({
+      message: "No token provided",
+    });
+  }
+
+  const token = authHeader.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({
+      message: "Invalid token format",
+    });
+  }
+
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    req.user = decoded;
+    next();
+  } catch {
+    return res.status(401).json({
+      message: "Invalid or expired token",
+    });
+  }
+}
 
 const port = Number(process.env.PORT) || 3000;
 
@@ -24,9 +81,16 @@ app.post("/api/register", async (req, res) => {
       [username, hashedPassword],
     );
 
+    const user = result.rows[0];
+    const token = createToken({
+      id: user.id,
+      username: user.username,
+    })
+
     return res.status(201).json({
       message: "Registration successful",
-      user: result.rows[0],
+      user,
+      token
     });
   } catch (error: any) {
     if (error.code === "23505") {
@@ -68,12 +132,18 @@ app.post("/api/login", async (req, res) => {
       });
     }
 
+    const token = createToken({
+      id: user.id,
+      username: user.username,
+    })
+
     return res.json({
       message: "Login successful",
       user: {
         id: user.id,
         username: user.username,
       },
+      token
     });
   } catch (error) {
     console.log(error);
@@ -83,6 +153,13 @@ app.post("/api/login", async (req, res) => {
     });
   }
 });
+
+app.get("/api/me", verifyToken, async(req: AuthRequest, res)=>{
+  return res.json({
+    message: "You are verified.",
+    user: req.user,
+  })
+} )
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
