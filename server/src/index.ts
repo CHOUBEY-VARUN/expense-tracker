@@ -1,5 +1,5 @@
 import bcrypt from "bcrypt";
-import jwt from "jsonwebtoken";
+import jwt, { SignOptions } from "jsonwebtoken";
 import express, { Request, Response, NextFunction } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
@@ -12,7 +12,7 @@ const app = express();
 app.use(cors({ origin: "http://localhost:5173" }));
 app.use(express.json());
 
-const JWT_SECRET = process.env.JWT_SECRET;
+const JWT_SECRET = process.env.JWT_SECRET || "";
 
 if (!JWT_SECRET) {
   throw new Error("JWT_SECRET is missing in .env");
@@ -28,15 +28,17 @@ type AuthRequest = Request & {
 };
 
 function createToken(user: TokenPayload) {
+  const options: SignOptions = {
+    expiresIn: "1h",
+  };
+
   return jwt.sign(
     {
       id: user.id,
       username: user.username,
     },
     JWT_SECRET,
-    {
-      expiresIn: process.env.JWT_EXPIRES_IN || "1h",
-    }
+    options,
   );
 }
 
@@ -58,7 +60,7 @@ function verifyToken(req: AuthRequest, res: Response, next: NextFunction) {
   }
 
   try {
-    const decoded = jwt.verify(token, JWT_SECRET) as TokenPayload;
+    const decoded = jwt.verify(token, JWT_SECRET) as unknown as TokenPayload;
     req.user = decoded;
     next();
   } catch {
@@ -85,12 +87,12 @@ app.post("/api/register", async (req, res) => {
     const token = createToken({
       id: user.id,
       username: user.username,
-    })
+    });
 
     return res.status(201).json({
       message: "Registration successful",
       user,
-      token
+      token,
     });
   } catch (error: any) {
     if (error.code === "23505") {
@@ -135,7 +137,7 @@ app.post("/api/login", async (req, res) => {
     const token = createToken({
       id: user.id,
       username: user.username,
-    })
+    });
 
     return res.json({
       message: "Login successful",
@@ -143,7 +145,7 @@ app.post("/api/login", async (req, res) => {
         id: user.id,
         username: user.username,
       },
-      token
+      token,
     });
   } catch (error) {
     console.log(error);
@@ -154,12 +156,12 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-app.get("/api/me", verifyToken, async(req: AuthRequest, res)=>{
+app.get("/api/me", verifyToken, async (req: AuthRequest, res) => {
   return res.json({
     message: "You are verified.",
     user: req.user,
-  })
-} )
+  });
+});
 
 app.listen(port, () => {
   console.log(`Server running on port ${port}`);
