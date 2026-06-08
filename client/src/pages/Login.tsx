@@ -21,8 +21,8 @@ function Login() {
       console.log(data.message);
     } else {
       localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.data));
-      navigate("/");
+      localStorage.setItem("user", JSON.stringify(data.user));
+      navigate("/dashboard");
     }
   };
   return (

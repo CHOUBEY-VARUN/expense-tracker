@@ -20,8 +20,8 @@ function Register() {
     console.log("User registered:", data);
 
     localStorage.setItem("token", data.token);
-    localStorage.setItem("user", JSON.stringify(data.data));
-    navigate("/");
+    localStorage.setItem("user", JSON.stringify(data.user));
+    navigate("/dashboard");
   };
 
   return (
