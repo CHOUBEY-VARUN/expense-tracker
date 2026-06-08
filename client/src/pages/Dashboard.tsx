@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
+import Logout from "../components/Logout";
 
 type User = {
   id: number;
@@ -50,6 +51,7 @@ function Dashboard() {
     <div>
       <h1>Dashboard</h1>
       <h2>Welcome, {user?.username}</h2>
+      <Logout/>
     </div>
   )
 }
