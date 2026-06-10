@@ -26,7 +26,7 @@ function AuthForm({ title, buttonText, onSubmit }: AuthFormProps) {
           onChange={(e) => setUsername(e.target.value)}
         />
         <input
-          type="text"
+          type="password"
           placeholder="Password :"
           value={password}
           onChange={(e) => setPassword(e.target.value)}

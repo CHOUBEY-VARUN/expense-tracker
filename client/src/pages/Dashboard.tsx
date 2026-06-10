@@ -37,8 +37,38 @@ function Dashboard() {
   const [expenses, setExpenses] = useState<Transaction[]>([]);
   const [totals, setTotals] = useState<Totals | null>(null);
 
+  const [type, setType] = useState("");
+  const [title, setTitle] = useState("");
+  const [amount, setAmount] = useState("");
+  const [category, setCategory] = useState("");
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem("token");
+
+    const result = await fetch("http://localhost:3000/api/transactions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        type,
+        title,
+        amount,
+        category,
+      }),
+    });
+
+    const data = await result.json();
+
+    if (!result.ok) {
+      console.log(data.message);
+    }
+  };
 
   useEffect(() => {
     const getDashboardData = async () => {
@@ -75,7 +105,7 @@ function Dashboard() {
     };
 
     getDashboardData();
-  }, [navigate]);
+  }, [navigate,totals]);
 
   const formatAmount = (amount: number) => {
     return `₹${amount.toFixed(2)}`;
@@ -102,7 +132,122 @@ function Dashboard() {
         <p>Current Balance: {formatAmount(totals?.balance ?? 0)}</p>
       </section>
 
+      <section>
+        <h2>Income</h2>
 
+        {incomes.length === 0 ? (
+          <p>No income transactions yet.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {incomes.map((income) => (
+                <tr key={income.id}>
+                  <td>{income.title}</td>
+                  <td>{income.category ?? "Uncategorized"}</td>
+                  <td>{formatAmount(income.amount)}</td>
+                  <td>{income.transaction_date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section>
+        <h2>Expenses</h2>
+
+        {expenses.length === 0 ? (
+          <p>No expense transactions yet.</p>
+        ) : (
+          <table>
+            <thead>
+              <tr>
+                <th>Title</th>
+                <th>Category</th>
+                <th>Amount</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {expenses.map((expense) => (
+                <tr key={expense.id}>
+                  <td>{expense.title}</td>
+                  <td>{expense.category ?? "Uncategorized"}</td>
+                  <td>{formatAmount(expense.amount)}</td>
+                  <td>{expense.transaction_date}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <div>
+        <form onSubmit={handleSubmit}>
+          <label>
+            <input
+              type="radio"
+              name="type"
+              value="income"
+              checked={type === "income"}
+              onChange={(e) => setType(e.target.value)}
+            />
+            Income
+          </label>
+
+          <label>
+            <input
+              type="radio"
+              name="type"
+              value="expense"
+              checked={type === "expense"}
+              onChange={(e) => setType(e.target.value)}
+            />
+            Expense
+          </label>
+          <label>
+            <input
+              type="text"
+              name="title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+            />
+            Title
+          </label>
+          <label>
+            <input
+              type="number"
+              name="amount"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+            Amount
+          </label>
+
+          <label>Category</label>
+
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+          >
+            <option value="food">Food</option>
+            <option value="travel">Travel</option>
+            <option value="shopping">Shopping</option>
+            <option value="bills">Bills</option>
+          </select>
+          <button type="submit">Submit</button>
+        </form>
+      </div>
       <Logout />
     </div>
   );

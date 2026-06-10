@@ -156,18 +156,21 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-app.get("/api/transactions", verifyToken, async (req: AuthRequest, res: Response) => {
-  try {
-    if (!req.user) {
-      return res.status(401).json({
-        message: "Unauthorized",
-      });
-    }
+app.get(
+  "/api/transactions",
+  verifyToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({
+          message: "Unauthorized",
+        });
+      }
 
-    const userId = req.user.id;
+      const userId = req.user.id;
 
-    const result = await pool.query(
-      `
+      const result = await pool.query(
+        `
       SELECT
         id,
         type,
@@ -180,48 +183,74 @@ app.get("/api/transactions", verifyToken, async (req: AuthRequest, res: Response
       WHERE user_id = $1
       ORDER BY transaction_date DESC, created_at DESC
       `,
-      [userId],
-    );
+        [userId],
+      );
 
-    const transactions = result.rows.map((transaction) => ({
-      ...transaction,
-      amount: Number(transaction.amount),
-    }));
+      const transactions = result.rows.map((transaction) => ({
+        ...transaction,
+        amount: Number(transaction.amount),
+      }));
 
-    const incomes = transactions.filter(
-      (transaction) => transaction.type === "income",
-    );
+      const incomes = transactions.filter(
+        (transaction) => transaction.type === "income",
+      );
 
-    const expenses = transactions.filter(
-      (transaction) => transaction.type === "expense",
-    );
+      const expenses = transactions.filter(
+        (transaction) => transaction.type === "expense",
+      );
 
-    const totalIncome = incomes.reduce((sum, transaction) => {
-      return sum + transaction.amount;
-    }, 0);
+      const totalIncome = incomes.reduce((sum, transaction) => {
+        return sum + transaction.amount;
+      }, 0);
 
-    const totalExpenses = expenses.reduce((sum, transaction) => {
-      return sum + transaction.amount;
-    }, 0);
+      const totalExpenses = expenses.reduce((sum, transaction) => {
+        return sum + transaction.amount;
+      }, 0);
 
-    return res.json({
-      user: req.user,
-      incomes,
-      expenses,
-      totals: {
-        income: totalIncome,
-        expense: totalExpenses,
-        balance: totalIncome - totalExpenses,
-      },
-    });
-  } catch (error) {
-    console.log(error);
+      return res.json({
+        user: req.user,
+        incomes,
+        expenses,
+        totals: {
+          income: totalIncome,
+          expense: totalExpenses,
+          balance: totalIncome - totalExpenses,
+        },
+      });
+    } catch (error) {
+      console.log(error);
 
-    return res.status(500).json({
-      message: "Error fetching transactions",
-    });
-  }
-});
+      return res.status(500).json({
+        message: "Error fetching transactions",
+      });
+    }
+  },
+);
+
+app.post(
+  "/api/transactions",
+  verifyToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { type, title, amount, category } = req.body;
+      const numAmount = Number(amount);
+
+      const result = await pool.query(
+        "INSERT INTO transactions (user_id,title,amount,type,category) Values($1,$2,$3,$4,$5) RETURNING *",
+        [req.user?.id, title, numAmount, type, category],
+      );
+      res.status(200).json({
+        message:"transaction added successfully",
+        transaction: result.rows[0]
+      })
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: "Something went wrong.",
+      });
+    }
+  },
+);
 
 app.get("/api/me", verifyToken, async (req: AuthRequest, res) => {
   return res.json({
