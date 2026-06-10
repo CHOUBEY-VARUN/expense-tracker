@@ -29,7 +29,7 @@ type AuthRequest = Request & {
 
 function createToken(user: TokenPayload) {
   const options: SignOptions = {
-    expiresIn: "1h",
+    expiresIn: "30m",
   };
 
   return jwt.sign(
@@ -152,6 +152,73 @@ app.post("/api/login", async (req, res) => {
 
     return res.status(500).json({
       message: "Error occured",
+    });
+  }
+});
+
+app.get("/api/transactions", verifyToken, async (req: AuthRequest, res: Response) => {
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        message: "Unauthorized",
+      });
+    }
+
+    const userId = req.user.id;
+
+    const result = await pool.query(
+      `
+      SELECT
+        id,
+        type,
+        title,
+        amount,
+        category,
+        transaction_date,
+        created_at
+      FROM transactions
+      WHERE user_id = $1
+      ORDER BY transaction_date DESC, created_at DESC
+      `,
+      [userId],
+    );
+
+    const transactions = result.rows.map((transaction) => ({
+      ...transaction,
+      amount: Number(transaction.amount),
+    }));
+
+    const incomes = transactions.filter(
+      (transaction) => transaction.type === "income",
+    );
+
+    const expenses = transactions.filter(
+      (transaction) => transaction.type === "expense",
+    );
+
+    const totalIncome = incomes.reduce((sum, transaction) => {
+      return sum + transaction.amount;
+    }, 0);
+
+    const totalExpenses = expenses.reduce((sum, transaction) => {
+      return sum + transaction.amount;
+    }, 0);
+
+    return res.json({
+      user: req.user,
+      incomes,
+      expenses,
+      totals: {
+        income: totalIncome,
+        expense: totalExpenses,
+        balance: totalIncome - totalExpenses,
+      },
+    });
+  } catch (error) {
+    console.log(error);
+
+    return res.status(500).json({
+      message: "Error fetching transactions",
     });
   }
 });
