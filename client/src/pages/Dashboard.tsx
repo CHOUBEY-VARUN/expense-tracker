@@ -45,6 +45,17 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const targetBalance = 10000;
+
+  const currentBalance = totals?.balance ?? 0;
+
+  const balanceProgressRaw = Math.min(
+    Math.max((currentBalance / targetBalance) * 100, 0),
+    100
+  );
+
+  const balanceProgress = Math.floor(balanceProgressRaw);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const token = localStorage.getItem("token");
@@ -105,10 +116,31 @@ function Dashboard() {
     };
 
     getDashboardData();
-  }, [navigate,totals]);
+  }, [navigate, totals]);
 
   const formatAmount = (amount: number) => {
     return `₹${amount.toFixed(2)}`;
+  };
+
+  const formatTransactionDate = (date: string) => {
+    const dateMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    const transactionDate = dateMatch
+      ? new Date(
+          Number(dateMatch[1]),
+          Number(dateMatch[2]) - 1,
+          Number(dateMatch[3])
+        )
+      : new Date(date);
+
+    if (Number.isNaN(transactionDate.getTime())) {
+      return date;
+    }
+
+    const day = transactionDate.getDate();
+    const month = transactionDate.toLocaleString("en-US", { month: "long" });
+    const year = transactionDate.getFullYear();
+
+    return `${day} ${month},${year}`;
   };
 
   if (loading) {
@@ -119,137 +151,189 @@ function Dashboard() {
   }
 
   return (
-    <div>
-      <h1>Dashboard</h1>
+    <main className="dashboard-page">
+      <header className="dashboard-header">
+        <div>
+          <p className="eyebrow">Personal Finance</p>
+          <h1>Dashboard</h1>
+          <h2>Welcome, {user?.username}</h2>
+        </div>
 
-      <h2>Welcome, {user?.username}</h2>
+        <Logout />
+      </header>
 
-      <section>
-        <h2>Balance Summary</h2>
+      <section className="summary-grid" aria-label="Balance summary">
+        <article className="metric-card metric-card-income">
+          <span>Total Income</span>
+          <strong>{formatAmount(totals?.income ?? 0)}</strong>
+        </article>
 
-        <p>Total Income: {formatAmount(totals?.income ?? 0)}</p>
-        <p>Total Expenses: {formatAmount(totals?.expense ?? 0)}</p>
-        <p>Current Balance: {formatAmount(totals?.balance ?? 0)}</p>
+        <article className="metric-card metric-card-expense">
+          <span>Total Expenses</span>
+          <strong>{formatAmount(totals?.expense ?? 0)}</strong>
+        </article>
+
+        <article className="metric-card metric-card-balance">
+          <span>Current Balance</span>
+          <strong>{formatAmount(totals?.balance ?? 0)}</strong>
+        </article>
+
+        <article className="metric-card goal-card">
+          <div className="goal-card-header">
+            <span>Savings Goal</span>
+            <strong>{balanceProgress.toFixed(0)}%</strong>
+          </div>
+
+          <div className="balance-progress-container">
+            <div
+              className="balance-progress-fill"
+              style={{ width: `${balanceProgress}%` }}
+            ></div>
+          </div>
+
+          <p>{formatAmount(targetBalance)} target</p>
+        </article>
       </section>
 
-      <section>
-        <h2>Income</h2>
+      <div className="dashboard-content">
+        <section className="panel table-panel">
+          <div className="panel-header">
+            <h2>Income</h2>
+            <span>{incomes.length} entries</span>
+          </div>
 
-        {incomes.length === 0 ? (
-          <p>No income transactions yet.</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Category</th>
-                <th>Amount</th>
-                <th>Date</th>
-              </tr>
-            </thead>
+          {incomes.length === 0 ? (
+            <p className="empty-state">No income transactions yet.</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
 
-            <tbody>
-              {incomes.map((income) => (
-                <tr key={income.id}>
-                  <td>{income.title}</td>
-                  <td>{income.category ?? "Uncategorized"}</td>
-                  <td>{formatAmount(income.amount)}</td>
-                  <td>{income.transaction_date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+                <tbody>
+                  {incomes.map((income) => (
+                    <tr key={income.id}>
+                      <td>{income.title}</td>
+                      <td>{income.category ?? "Uncategorized"}</td>
+                      <td>{formatAmount(income.amount)}</td>
+                      <td>{formatTransactionDate(income.transaction_date)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
 
-      <section>
-        <h2>Expenses</h2>
+        <section className="panel table-panel">
+          <div className="panel-header">
+            <h2>Expenses</h2>
+            <span>{expenses.length} entries</span>
+          </div>
 
-        {expenses.length === 0 ? (
-          <p>No expense transactions yet.</p>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Category</th>
-                <th>Amount</th>
-                <th>Date</th>
-              </tr>
-            </thead>
+          {expenses.length === 0 ? (
+            <p className="empty-state">No expense transactions yet.</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                  </tr>
+                </thead>
 
-            <tbody>
-              {expenses.map((expense) => (
-                <tr key={expense.id}>
-                  <td>{expense.title}</td>
-                  <td>{expense.category ?? "Uncategorized"}</td>
-                  <td>{formatAmount(expense.amount)}</td>
-                  <td>{expense.transaction_date}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </section>
+                <tbody>
+                  {expenses.map((expense) => (
+                    <tr key={expense.id}>
+                      <td>{expense.title}</td>
+                      <td>{expense.category ?? "Uncategorized"}</td>
+                      <td>{formatAmount(expense.amount)}</td>
+                      <td>{formatTransactionDate(expense.transaction_date)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
 
-      <div>
-        <form onSubmit={handleSubmit}>
-          <label>
-            <input
-              type="radio"
-              name="type"
-              value="income"
-              checked={type === "income"}
-              onChange={(e) => setType(e.target.value)}
-            />
-            Income
-          </label>
+      <section className="panel transaction-panel">
+        <div className="panel-header">
+          <h2>Add Transaction</h2>
+        </div>
 
-          <label>
-            <input
-              type="radio"
-              name="type"
-              value="expense"
-              checked={type === "expense"}
-              onChange={(e) => setType(e.target.value)}
-            />
-            Expense
-          </label>
-          <label>
+        <form className="transaction-form" onSubmit={handleSubmit}>
+          <div className="type-toggle">
+            <label>
+              <input
+                type="radio"
+                name="type"
+                value="income"
+                checked={type === "income"}
+                onChange={(e) => setType(e.target.value)}
+              />
+              <span>Income</span>
+            </label>
+
+            <label>
+              <input
+                type="radio"
+                name="type"
+                value="expense"
+                checked={type === "expense"}
+                onChange={(e) => setType(e.target.value)}
+              />
+              <span>Expense</span>
+            </label>
+          </div>
+
+          <label className="form-field">
+            <span>Title</span>
             <input
               type="text"
               name="title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
             />
-            Title
           </label>
-          <label>
+
+          <label className="form-field">
+            <span>Amount</span>
             <input
               type="number"
               name="amount"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
             />
-            Amount
           </label>
 
-          <label>Category</label>
+          <label className="form-field">
+            <span>Category</span>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+            >
+              <option value="food">Food</option>
+              <option value="travel">Travel</option>
+              <option value="shopping">Shopping</option>
+              <option value="bills">Bills</option>
+            </select>
+          </label>
 
-          <select
-            value={category}
-            onChange={(e) => setCategory(e.target.value)}
-          >
-            <option value="food">Food</option>
-            <option value="travel">Travel</option>
-            <option value="shopping">Shopping</option>
-            <option value="bills">Bills</option>
-          </select>
           <button type="submit">Submit</button>
         </form>
-      </div>
-      <Logout />
-    </div>
+      </section>
+    </main>
   );
 }
 
