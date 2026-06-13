@@ -177,7 +177,7 @@ app.get(
         title,
         amount,
         category,
-        transaction_date,
+        to_char(transaction_date, 'YYYY-MM-DD') AS transaction_date,
         created_at
       FROM transactions
       WHERE user_id = $1
@@ -236,7 +236,19 @@ app.post(
       const numAmount = Number(amount);
 
       const result = await pool.query(
-        "INSERT INTO transactions (user_id,title,amount,type,category) Values($1,$2,$3,$4,$5) RETURNING *",
+        `
+        INSERT INTO transactions (user_id,title,amount,type,category)
+        VALUES ($1,$2,$3,$4,$5)
+        RETURNING
+          id,
+          user_id,
+          title,
+          amount,
+          type,
+          category,
+          to_char(transaction_date, 'YYYY-MM-DD') AS transaction_date,
+          created_at
+        `,
         [req.user?.id, title, numAmount, type, category],
       );
       res.status(200).json({

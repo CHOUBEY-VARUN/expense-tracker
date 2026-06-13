@@ -123,24 +123,39 @@ function Dashboard() {
   };
 
   const formatTransactionDate = (date: string) => {
-    const dateMatch = date.match(/^(\d{4})-(\d{2})-(\d{2})/);
-    const transactionDate = dateMatch
-      ? new Date(
-          Number(dateMatch[1]),
-          Number(dateMatch[2]) - 1,
-          Number(dateMatch[3])
-        )
-      : new Date(date);
+    const dateOnly = date.slice(0, 10);
+    const dateMatch = dateOnly.match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
-    if (Number.isNaN(transactionDate.getTime())) {
+    if (!dateMatch) {
       return date;
     }
 
-    const day = transactionDate.getDate();
-    const month = transactionDate.toLocaleString("en-US", { month: "long" });
-    const year = transactionDate.getFullYear();
+    const year = dateMatch[1];
+    const monthIndex = Number(dateMatch[2]) - 1;
+    const day = Number(dateMatch[3]);
 
-    return `${day} ${month},${year}`;
+    const monthNames = [
+      "January",
+      "February",
+      "March",
+      "April",
+      "May",
+      "June",
+      "July",
+      "August",
+      "September",
+      "October",
+      "November",
+      "December",
+    ];
+
+    const month = monthNames[monthIndex];
+
+    if (!month) {
+      return date;
+    }
+
+    return `${day} ${month}`;
   };
 
   if (loading) {
