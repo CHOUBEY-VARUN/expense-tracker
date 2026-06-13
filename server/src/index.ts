@@ -9,7 +9,11 @@ dotenv.config();
 
 const app = express();
 
-app.use(cors({ origin: "http://localhost:5173" }));
+app.use(
+  cors({
+    origin: process.env.CLIENT_URL || "http://localhost:5173",
+  })
+);
 app.use(express.json());
 
 const JWT_SECRET = process.env.JWT_SECRET || "";
@@ -156,8 +160,7 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-app.get(
-  "/api/transactions",
+app.get("/api/transactions",
   verifyToken,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -227,8 +230,7 @@ app.get(
   },
 );
 
-app.post(
-  "/api/transactions",
+app.post("/api/transactions",
   verifyToken,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -252,9 +254,9 @@ app.post(
         [req.user?.id, title, numAmount, type, category],
       );
       res.status(200).json({
-        message:"transaction added successfully",
-        transaction: result.rows[0]
-      })
+        message: "transaction added successfully",
+        transaction: result.rows[0],
+      });
     } catch (error) {
       console.error(error);
       res.status(500).json({

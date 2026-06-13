@@ -130,7 +130,6 @@ function Dashboard() {
       return date;
     }
 
-    const year = dateMatch[1];
     const monthIndex = Number(dateMatch[2]) - 1;
     const day = Number(dateMatch[3]);
 
