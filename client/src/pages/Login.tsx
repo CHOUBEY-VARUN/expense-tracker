@@ -1,10 +1,11 @@
 import { useNavigate } from "react-router-dom";
 import AuthForm from "../components/AuthForm";
+import API_BASE_URL from "../config/api";
 
 function Login() {
   const navigate = useNavigate();
   const handleLogin = async (username: string, password: string) => {
-    const result = await fetch("http://localhost:3000/api/login", {
+    const result = await fetch(`${API_BASE_URL}/api/login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

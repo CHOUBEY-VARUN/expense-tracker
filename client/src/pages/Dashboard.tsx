@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Logout from "../components/Logout";
+import API_BASE_URL from "../config/api";
 
 type User = {
   id: number;
@@ -60,7 +61,7 @@ function Dashboard() {
     e.preventDefault();
     const token = localStorage.getItem("token");
 
-    const result = await fetch("http://localhost:3000/api/transactions", {
+    const result = await fetch(`${API_BASE_URL}/api/transactions`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -91,7 +92,7 @@ function Dashboard() {
       }
 
       try {
-        const result = await fetch("http://localhost:3000/api/transactions", {
+        const result = await fetch(`${API_BASE_URL}/api/transactions`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
