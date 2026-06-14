@@ -17,10 +17,23 @@ const allowedOrigins = [
   .map((origin) => origin.trim().replace(/\/+$/, ""))
   .filter(Boolean);
 
+const allowedOriginPatterns = [
+  /^https:\/\/expense-tracker-[a-z0-9-]+-varuncodes-projects\.vercel\.app$/,
+];
+
+function isAllowedOrigin(origin: string) {
+  const normalizedOrigin = origin.replace(/\/+$/, "");
+
+  return (
+    allowedOrigins.includes(normalizedOrigin) ||
+    allowedOriginPatterns.some((pattern) => pattern.test(normalizedOrigin))
+  );
+}
+
 app.use(
   cors({
     origin(origin, callback) {
-      if (!origin || allowedOrigins.includes(origin.replace(/\/+$/, ""))) {
+      if (!origin || isAllowedOrigin(origin)) {
         callback(null, true);
         return;
       }
