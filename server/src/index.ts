@@ -267,8 +267,8 @@ app.post("/api/transactions",
 
       const result = await pool.query(
         `
-        INSERT INTO transactions (user_id,title,amount,type,category)
-        VALUES ($1,$2,$3,$4,$5)
+        INSERT INTO transactions (user_id,title,amount,type,category,transaction_date)
+        VALUES ($1,$2,$3,$4,$5,CURRENT_DATE)
         RETURNING
           id,
           user_id,
