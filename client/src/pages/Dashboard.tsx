@@ -2,6 +2,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useState } from "react";
 import Logout from "../components/Logout";
 import API_BASE_URL from "../config/api";
+import DeleteBtn from "../components/DeleteBtn";
 
 type User = {
   id: number;
@@ -238,6 +239,7 @@ function Dashboard() {
                       <td>{income.category ?? "Uncategorized"}</td>
                       <td>{formatAmount(income.amount)}</td>
                       <td>{formatTransactionDate(income.transaction_date)}</td>
+                      <DeleteBtn transactionId={income.id}/>
                     </tr>
                   ))}
                 </tbody>
@@ -273,6 +275,7 @@ function Dashboard() {
                       <td>{expense.category ?? "Uncategorized"}</td>
                       <td>{formatAmount(expense.amount)}</td>
                       <td>{formatTransactionDate(expense.transaction_date)}</td>
+                      <DeleteBtn transactionId={expense.id}/>
                     </tr>
                   ))}
                 </tbody>
