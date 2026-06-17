@@ -188,7 +188,8 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
-app.get("/api/transactions",
+app.get(
+  "/api/transactions",
   verifyToken,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -258,7 +259,8 @@ app.get("/api/transactions",
   },
 );
 
-app.post("/api/transactions",
+app.post(
+  "/api/transactions",
   verifyToken,
   async (req: AuthRequest, res: Response) => {
     try {
@@ -283,6 +285,31 @@ app.post("/api/transactions",
       );
       res.status(200).json({
         message: "transaction added successfully",
+        transaction: result.rows[0],
+      });
+    } catch (error) {
+      console.error(error);
+      res.status(500).json({
+        message: "Something went wrong.",
+      });
+    }
+  },
+);
+
+app.delete(
+  "/api/transactions/:id",
+  verifyToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const transactionId = req.params.id;
+      const userId = req.user?.id;
+
+      const result = await pool.query(
+        `DELETE FROM transactions WHERE id = $1 AND user_id = $2 RETURNING *`,
+        [transactionId,userId],
+      );
+      res.status(200).json({
+        message: "transaction deleted successfully",
         transaction: result.rows[0],
       });
     } catch (error) {
