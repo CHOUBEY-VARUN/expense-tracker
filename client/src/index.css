@@ -452,6 +452,50 @@ tbody tr:last-child td {
   gap: 8px;
 }
 
+.form-alert {
+  margin-bottom: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.transaction-panel > .form-alert {
+  margin: 18px 18px 0;
+}
+
+.form-alert-error {
+  color: #fecdd3;
+  background: rgba(251, 113, 133, 0.1);
+  border-color: rgba(251, 113, 133, 0.35);
+}
+
+.form-alert-success {
+  color: #bbf7d0;
+  background: rgba(74, 222, 128, 0.1);
+  border-color: rgba(74, 222, 128, 0.35);
+}
+
+.form-error {
+  color: #fecdd3;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+input[aria-invalid="true"],
+select[aria-invalid="true"] {
+  border-color: rgba(251, 113, 133, 0.72);
+  box-shadow: 0 0 0 4px rgba(251, 113, 133, 0.1);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+  transform: none;
+  box-shadow: none;
+}
+
 .transaction-form button {
   align-self: end;
 }
