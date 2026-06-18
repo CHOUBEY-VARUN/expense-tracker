@@ -59,6 +59,10 @@ type AuthRequest = Request & {
   user?: TokenPayload;
 };
 
+function getRequiredString(value: unknown) {
+  return typeof value === "string" ? value.trim() : "";
+}
+
 function createToken(user: TokenPayload) {
   const options: SignOptions = {
     expiresIn: "30m",
@@ -106,7 +110,15 @@ const port = Number(process.env.PORT) || 3000;
 
 app.post("/api/register", async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const username = getRequiredString(req.body?.username);
+    const password =
+      typeof req.body?.password === "string" ? req.body.password : "";
+
+    if (!username || !password.trim()) {
+      return res.status(400).json({
+        message: "Username and password are required.",
+      });
+    }
 
     const hashedPassword = await bcrypt.hash(password, 12);
 
@@ -143,7 +155,15 @@ app.post("/api/register", async (req, res) => {
 
 app.post("/api/login", async (req, res) => {
   try {
-    const { username, password } = req.body;
+    const username = getRequiredString(req.body?.username);
+    const password =
+      typeof req.body?.password === "string" ? req.body.password : "";
+
+    if (!username || !password.trim()) {
+      return res.status(400).json({
+        message: "Username and password are required.",
+      });
+    }
 
     const result = await pool.query(
       "SELECT id, username, password FROM users WHERE username = $1",
@@ -264,8 +284,34 @@ app.post(
   verifyToken,
   async (req: AuthRequest, res: Response) => {
     try {
-      const { type, title, amount, category } = req.body;
-      const numAmount = Number(amount);
+      const type = getRequiredString(req.body?.type);
+      const title = getRequiredString(req.body?.title);
+      const category = getRequiredString(req.body?.category);
+      const numAmount = Number(req.body?.amount);
+
+      if (type !== "income" && type !== "expense") {
+        return res.status(400).json({
+          message: "Transaction type must be income or expense.",
+        });
+      }
+
+      if (!title) {
+        return res.status(400).json({
+          message: "Title is required.",
+        });
+      }
+
+      if (!Number.isFinite(numAmount) || numAmount <= 0) {
+        return res.status(400).json({
+          message: "Amount must be greater than 0.",
+        });
+      }
+
+      if (!category) {
+        return res.status(400).json({
+          message: "Category is required.",
+        });
+      }
 
       const result = await pool.query(
         `
