@@ -32,6 +32,13 @@ type DashboardData = {
   totals: Totals;
 };
 
+type TransactionFormErrors = {
+  type?: string;
+  title?: string;
+  amount?: string;
+  category?: string;
+};
+
 function Dashboard() {
   const navigate = useNavigate();
   const [user, setUser] = useState<User | null>(null);
@@ -43,6 +50,12 @@ function Dashboard() {
   const [title, setTitle] = useState("");
   const [amount, setAmount] = useState("");
   const [category, setCategory] = useState("");
+  const [formErrors, setFormErrors] = useState<TransactionFormErrors>({});
+  const [formMessage, setFormMessage] = useState("");
+  const [formMessageType, setFormMessageType] = useState<"success" | "error">(
+    "error",
+  );
+  const [submittingTransaction, setSubmittingTransaction] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -58,28 +71,86 @@ function Dashboard() {
 
   const balanceProgress = Math.floor(balanceProgressRaw);
 
+  const validateTransactionForm = () => {
+    const errors: TransactionFormErrors = {};
+    const numericAmount = Number(amount);
+
+    if (!type) {
+      errors.type = "Choose income or expense.";
+    }
+
+    if (!title.trim()) {
+      errors.title = "Title is required.";
+    }
+
+    if (!amount.trim()) {
+      errors.amount = "Amount is required.";
+    } else if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
+      errors.amount = "Amount must be greater than 0.";
+    }
+
+    if (!category) {
+      errors.category = "Category is required.";
+    }
+
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setFormMessage("");
+
+    if (!validateTransactionForm()) {
+      return;
+    }
+
     const token = localStorage.getItem("token");
 
-    const result = await fetch(`${API_BASE_URL}/api/transactions`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify({
-        type,
-        title,
-        amount,
-        category,
-      }),
-    });
+    if (!token) {
+      navigate("/login");
+      return;
+    }
 
-    const data = await result.json();
+    try {
+      setSubmittingTransaction(true);
 
-    if (!result.ok) {
-      console.log(data.message);
+      const result = await fetch(`${API_BASE_URL}/api/transactions`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          type,
+          title: title.trim(),
+          amount,
+          category,
+        }),
+      });
+
+      const data = await result.json();
+
+      if (!result.ok) {
+        setFormMessageType("error");
+        setFormMessage(
+          data.message || "Could not add transaction. Please try again.",
+        );
+        return;
+      }
+
+      setType("");
+      setTitle("");
+      setAmount("");
+      setCategory("");
+      setFormErrors({});
+      setFormMessageType("success");
+      setFormMessage("Transaction added successfully.");
+    } catch {
+      setFormMessageType("error");
+      setFormMessage("Could not connect to the server. Please try again.");
+    } finally {
+      setSubmittingTransaction(false);
     }
   };
 
@@ -290,29 +361,48 @@ function Dashboard() {
           <h2>Add Transaction</h2>
         </div>
 
-        <form className="transaction-form" onSubmit={handleSubmit}>
-          <div className="type-toggle">
-            <label>
-              <input
-                type="radio"
-                name="type"
-                value="income"
-                checked={type === "income"}
-                onChange={(e) => setType(e.target.value)}
-              />
-              <span>Income</span>
-            </label>
+        {formMessage && (
+          <p className={`form-alert form-alert-${formMessageType}`}>
+            {formMessage}
+          </p>
+        )}
 
-            <label>
-              <input
-                type="radio"
-                name="type"
-                value="expense"
-                checked={type === "expense"}
-                onChange={(e) => setType(e.target.value)}
-              />
-              <span>Expense</span>
-            </label>
+        <form className="transaction-form" onSubmit={handleSubmit} noValidate>
+          <div className="form-field transaction-type-field">
+            <div className="type-toggle">
+              <label>
+                <input
+                  type="radio"
+                  name="type"
+                  value="income"
+                  checked={type === "income"}
+                  onChange={(e) => {
+                    setType(e.target.value);
+                    setFormErrors((current) => ({ ...current, type: "" }));
+                    setFormMessage("");
+                  }}
+                />
+                <span>Income</span>
+              </label>
+
+              <label>
+                <input
+                  type="radio"
+                  name="type"
+                  value="expense"
+                  checked={type === "expense"}
+                  onChange={(e) => {
+                    setType(e.target.value);
+                    setFormErrors((current) => ({ ...current, type: "" }));
+                    setFormMessage("");
+                  }}
+                />
+                <span>Expense</span>
+              </label>
+            </div>
+            {formErrors.type && (
+              <small className="form-error">{formErrors.type}</small>
+            )}
           </div>
 
           <label className="form-field">
@@ -321,8 +411,16 @@ function Dashboard() {
               type="text"
               name="title"
               value={title}
-              onChange={(e) => setTitle(e.target.value)}
+              aria-invalid={formErrors.title ? "true" : "false"}
+              onChange={(e) => {
+                setTitle(e.target.value);
+                setFormErrors((current) => ({ ...current, title: "" }));
+                setFormMessage("");
+              }}
             />
+            {formErrors.title && (
+              <small className="form-error">{formErrors.title}</small>
+            )}
           </label>
 
           <label className="form-field">
@@ -331,24 +429,45 @@ function Dashboard() {
               type="number"
               name="amount"
               value={amount}
-              onChange={(e) => setAmount(e.target.value)}
+              min="0"
+              step="0.01"
+              aria-invalid={formErrors.amount ? "true" : "false"}
+              onChange={(e) => {
+                setAmount(e.target.value);
+                setFormErrors((current) => ({ ...current, amount: "" }));
+                setFormMessage("");
+              }}
             />
+            {formErrors.amount && (
+              <small className="form-error">{formErrors.amount}</small>
+            )}
           </label>
 
           <label className="form-field">
             <span>Category</span>
             <select
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              aria-invalid={formErrors.category ? "true" : "false"}
+              onChange={(e) => {
+                setCategory(e.target.value);
+                setFormErrors((current) => ({ ...current, category: "" }));
+                setFormMessage("");
+              }}
             >
+              <option value="">Select category</option>
               <option value="food">Food</option>
               <option value="travel">Travel</option>
               <option value="shopping">Shopping</option>
               <option value="bills">Bills</option>
             </select>
+            {formErrors.category && (
+              <small className="form-error">{formErrors.category}</small>
+            )}
           </label>
 
-          <button type="submit">Submit</button>
+          <button type="submit" disabled={submittingTransaction}>
+            {submittingTransaction ? "Submitting..." : "Submit"}
+          </button>
         </form>
       </section>
     </main>
