@@ -21,7 +21,7 @@ A full-stack expense tracking application for managing personal income, expenses
 - Password hashing with bcrypt
 - JWT-based authentication
 - Protected dashboard route and protected transaction API endpoints
-- Add income and expense transactions
+- Add,edit and delete income and expense transactions
 - View total income, total expenses, and current balance
 - View income and expense entries separately
 - Full-stack deployment setup for a Vercel frontend and Render backend
@@ -44,9 +44,7 @@ Screenshots are not committed yet. Add images to the `screenshots/` folder and u
 
 ## Future Improvements
 
-- Add form validation and user-facing error messages
 - Refresh dashboard data immediately after adding a transaction
-- Add edit and delete actions for transactions
 - Add transaction date selection instead of always using the current date
 - Add filtering by category, type, and date range
 - Add charts for spending trends and category breakdowns
