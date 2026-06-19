@@ -44,9 +44,7 @@ Screenshots are not committed yet. Add images to the `screenshots/` folder and u
 
 ## Future Improvements
 
-- Add form validation and user-facing error messages
 - Refresh dashboard data immediately after adding a transaction
-- Add edit and delete actions for transactions
 - Add transaction date selection instead of always using the current date
 - Add filtering by category, type, and date range
 - Add charts for spending trends and category breakdowns
