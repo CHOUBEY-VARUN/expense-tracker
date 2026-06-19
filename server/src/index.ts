@@ -296,6 +296,91 @@ app.post(
   },
 );
 
+app.put(
+  "/api/transactions/:id",
+  verifyToken,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const transactionId = req.params.id;
+      const userId = req.user?.id;
+      const { type, title, amount, category } = req.body;
+      const numAmount = Number(amount);
+
+      if (type !== "income" && type !== "expense") {
+        return res.status(400).json({
+          message: "Transaction type must be income or expense.",
+        });
+      }
+
+      if (!title || !String(title).trim()) {
+        return res.status(400).json({
+          message: "Title is required.",
+        });
+      }
+
+      if (!Number.isFinite(numAmount) || numAmount <= 0) {
+        return res.status(400).json({
+          message: "Amount must be greater than 0.",
+        });
+      }
+
+      if (!category || !String(category).trim()) {
+        return res.status(400).json({
+          message: "Category is required.",
+        });
+      }
+
+      const result = await pool.query(
+        `
+        UPDATE transactions
+        SET
+          title = $1,
+          amount = $2,
+          type = $3,
+          category = $4
+        WHERE id = $5 AND user_id = $6
+        RETURNING
+          id,
+          user_id,
+          title,
+          amount,
+          type,
+          category,
+          to_char(transaction_date, 'YYYY-MM-DD') AS transaction_date,
+          created_at
+        `,
+        [
+          String(title).trim(),
+          numAmount,
+          type,
+          String(category).trim(),
+          transactionId,
+          userId,
+        ],
+      );
+
+      if (result.rows.length === 0) {
+        return res.status(404).json({
+          message: "Transaction not found",
+        });
+      }
+
+      return res.status(200).json({
+        message: "transaction updated successfully",
+        transaction: {
+          ...result.rows[0],
+          amount: Number(result.rows[0].amount),
+        },
+      });
+    } catch (error) {
+      console.error(error);
+      return res.status(500).json({
+        message: "Something went wrong.",
+      });
+    }
+  },
+);
+
 app.delete(
   "/api/transactions/:id",
   verifyToken,

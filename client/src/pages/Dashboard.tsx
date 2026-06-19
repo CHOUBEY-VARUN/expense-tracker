@@ -56,6 +56,9 @@ function Dashboard() {
     "error",
   );
   const [submittingTransaction, setSubmittingTransaction] = useState(false);
+  const [editingTransaction, setEditingTransaction] =
+    useState<Transaction | null>(null);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -66,7 +69,7 @@ function Dashboard() {
 
   const balanceProgressRaw = Math.min(
     Math.max((currentBalance / targetBalance) * 100, 0),
-    100
+    100,
   );
 
   const balanceProgress = Math.floor(balanceProgressRaw);
@@ -97,6 +100,26 @@ function Dashboard() {
     return Object.keys(errors).length === 0;
   };
 
+  const resetTransactionForm = () => {
+    setType("");
+    setTitle("");
+    setAmount("");
+    setCategory("");
+    setFormErrors({});
+    setFormMessage("");
+    setEditingTransaction(null);
+  };
+
+  const startEditingTransaction = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setType(transaction.type);
+    setTitle(transaction.title);
+    setAmount(String(transaction.amount));
+    setCategory(transaction.category ?? "");
+    setFormErrors({});
+    setFormMessage("");
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setFormMessage("");
@@ -112,29 +135,37 @@ function Dashboard() {
       return;
     }
 
+    const isEditing = Boolean(editingTransaction);
+
     try {
       setSubmittingTransaction(true);
 
-      const result = await fetch(`${API_BASE_URL}/api/transactions`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
+      const result = await fetch(
+        isEditing
+          ? `${API_BASE_URL}/api/transactions/${editingTransaction?.id}`
+          : `${API_BASE_URL}/api/transactions`,
+        {
+          method: isEditing ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            type,
+            title: title.trim(),
+            amount,
+            category,
+          }),
         },
-        body: JSON.stringify({
-          type,
-          title: title.trim(),
-          amount,
-          category,
-        }),
-      });
+      );
 
       const data = await result.json();
 
       if (!result.ok) {
         setFormMessageType("error");
         setFormMessage(
-          data.message || "Could not add transaction. Please try again.",
+          data.message ||
+            `Could not ${isEditing ? "update" : "add"} transaction. Please try again.`,
         );
         return;
       }
@@ -144,8 +175,14 @@ function Dashboard() {
       setAmount("");
       setCategory("");
       setFormErrors({});
+      setEditingTransaction(null);
       setFormMessageType("success");
-      setFormMessage("Transaction added successfully.");
+      setFormMessage(
+        isEditing
+          ? "Transaction updated successfully."
+          : "Transaction added successfully.",
+      );
+      setRefreshKey((current) => current + 1);
     } catch {
       setFormMessageType("error");
       setFormMessage("Could not connect to the server. Please try again.");
@@ -189,7 +226,7 @@ function Dashboard() {
     };
 
     getDashboardData();
-  }, [navigate, totals]);
+  }, [navigate, refreshKey]);
 
   const formatAmount = (amount: number) => {
     return `₹${amount.toFixed(2)}`;
@@ -282,83 +319,9 @@ function Dashboard() {
         </article>
       </section>
 
-      <div className="dashboard-content">
-        <section className="panel table-panel">
-          <div className="panel-header">
-            <h2>Income</h2>
-            <span>{incomes.length} entries</span>
-          </div>
-
-          {incomes.length === 0 ? (
-            <p className="empty-state">No income transactions yet.</p>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Category</th>
-                    <th>Amount</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {incomes.map((income) => (
-                    <tr key={income.id}>
-                      <td>{income.title}</td>
-                      <td>{income.category ?? "Uncategorized"}</td>
-                      <td>{formatAmount(income.amount)}</td>
-                      <td>{formatTransactionDate(income.transaction_date)}</td>
-                      <DeleteBtn transactionId={income.id}/>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-
-        <section className="panel table-panel">
-          <div className="panel-header">
-            <h2>Expenses</h2>
-            <span>{expenses.length} entries</span>
-          </div>
-
-          {expenses.length === 0 ? (
-            <p className="empty-state">No expense transactions yet.</p>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Title</th>
-                    <th>Category</th>
-                    <th>Amount</th>
-                    <th>Date</th>
-                  </tr>
-                </thead>
-
-                <tbody>
-                  {expenses.map((expense) => (
-                    <tr key={expense.id}>
-                      <td>{expense.title}</td>
-                      <td>{expense.category ?? "Uncategorized"}</td>
-                      <td>{formatAmount(expense.amount)}</td>
-                      <td>{formatTransactionDate(expense.transaction_date)}</td>
-                      <DeleteBtn transactionId={expense.id}/>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </section>
-      </div>
-
       <section className="panel transaction-panel">
         <div className="panel-header">
-          <h2>Add Transaction</h2>
+          <h2>{editingTransaction ? "Edit Transaction" : "Add Transaction"}</h2>
         </div>
 
         {formMessage && (
@@ -465,11 +428,134 @@ function Dashboard() {
             )}
           </label>
 
-          <button type="submit" disabled={submittingTransaction}>
-            {submittingTransaction ? "Submitting..." : "Submit"}
-          </button>
+          <div className="transaction-form-actions">
+            <button type="submit" disabled={submittingTransaction}>
+              {submittingTransaction
+                ? editingTransaction
+                  ? "Updating..."
+                  : "Submitting..."
+                : editingTransaction
+                  ? "Update"
+                  : "Submit"}
+            </button>
+
+            {editingTransaction && (
+              <button
+                className="button-secondary"
+                type="button"
+                onClick={resetTransactionForm}
+                disabled={submittingTransaction}
+              >
+                Cancel
+              </button>
+            )}
+          </div>
         </form>
       </section>
+
+      <div className="dashboard-content">
+        <section className="panel table-panel">
+          <div className="panel-header">
+            <h2>Income</h2>
+            <span>{incomes.length} entries</span>
+          </div>
+
+          {incomes.length === 0 ? (
+            <p className="empty-state">No income transactions yet.</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {incomes.map((income) => (
+                    <tr key={income.id}>
+                      <td>{income.title}</td>
+                      <td>{income.category ?? "Uncategorized"}</td>
+                      <td>{formatAmount(income.amount)}</td>
+                      <td>{formatTransactionDate(income.transaction_date)}</td>
+                      <td className="transaction-actions">
+                        <button
+                          type="button"
+                          className="button-secondary"
+                          onClick={() => startEditingTransaction(income)}
+                        >
+                          EDIT
+                        </button>
+                        <DeleteBtn
+                          transactionId={income.id}
+                          onDeleted={() =>
+                            setRefreshKey((current) => current + 1)
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+
+        <section className="panel table-panel">
+          <div className="panel-header">
+            <h2>Expenses</h2>
+            <span>{expenses.length} entries</span>
+          </div>
+
+          {expenses.length === 0 ? (
+            <p className="empty-state">No expense transactions yet.</p>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Title</th>
+                    <th>Category</th>
+                    <th>Amount</th>
+                    <th>Date</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {expenses.map((expense) => (
+                    <tr key={expense.id}>
+                      <td>{expense.title}</td>
+                      <td>{expense.category ?? "Uncategorized"}</td>
+                      <td>{formatAmount(expense.amount)}</td>
+                      <td>{formatTransactionDate(expense.transaction_date)}</td>
+                      <td className="transaction-actions">
+                        <button
+                          type="button"
+                          className="button-secondary"
+                          onClick={() => startEditingTransaction(expense)}
+                        >
+                          EDIT
+                        </button>
+                        <DeleteBtn
+                          transactionId={expense.id}
+                          onDeleted={() =>
+                            setRefreshKey((current) => current + 1)
+                          }
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </section>
+      </div>
     </main>
   );
 }
