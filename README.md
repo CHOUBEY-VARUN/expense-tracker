@@ -60,7 +60,7 @@ A full-stack expense tracking application for managing personal income, expenses
 ### Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/expense-tracker.git
+git clone https://github.com/CHOUBEY-VARUN/expense-tracker.git
 cd expense-tracker
 ```
 
