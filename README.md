@@ -28,7 +28,6 @@ A full-stack expense tracking application for managing personal income, expenses
 
 ## Screenshots
 
-Screenshots are not committed yet. Add images to the `screenshots/` folder and update these paths when available.
 
 ![Home page screenshot](screenshots/home.jpeg)
 ![Dashboard screenshot](screenshots/dashboard.jpeg)
