@@ -44,6 +44,14 @@ app.use(
 );
 app.use(express.json());
 
+app.get("/api/health", (_req: Request, res: Response) => {
+  return res.json({
+    status: "ok",
+    service: "expense-tracker-api",
+    timestamp: new Date().toISOString(),
+  });
+});
+
 const JWT_SECRET = process.env.JWT_SECRET || "";
 
 if (!JWT_SECRET) {
