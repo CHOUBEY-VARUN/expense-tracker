@@ -5,7 +5,7 @@ A full-stack expense tracking application for managing personal income, expenses
 ## Live Demo
 
 - Frontend: https://expense-tracker-five-delta-16.vercel.app/
-- Backend/API: https://expense-tracker-7aj5.onrender.com
+- Backend/API: https://expense-tracker-7aj5.onrender.com/api/health
 
 ## Tech Stack
 
