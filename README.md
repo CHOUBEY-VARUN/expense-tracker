@@ -9,6 +9,8 @@ The project includes user authentication, secure password hashing, JWT-based API
 
 ## Live Demo
 
+https://github.com/user-attachments/assets/c23ad7e2-e934-4260-a176-2f280f9c5068
+
 * Frontend: https://expense-tracker-five-delta-16.vercel.app/
 * Backend health check: https://expense-tracker-7aj5.onrender.com/api/health
 
