@@ -32,6 +32,7 @@ The backend is hosted on Render's free tier, so the first API request may take a
 * View income and expense entries separately.
 * PostgreSQL-backed transaction persistence.
 * Environment-based frontend/backend configuration.
+* IP-based rate limiting for authentication and API endpoints.
 * Full-stack deployment with Vercel, Render, and Neon/PostgreSQL.
 * Backend health check endpoint for deployment verification.
 
@@ -205,6 +206,15 @@ CLIENT_URL=http://localhost:5173
 # Optional: comma-separated list of additional allowed frontend origins
 CLIENT_URLS=
 
+# Rate limiting and proxy configuration
+TRUST_PROXY_HOPS=1
+API_RATE_LIMIT_WINDOW_MS=900000
+API_RATE_LIMIT_MAX=300
+LOGIN_RATE_LIMIT_WINDOW_MS=900000
+LOGIN_RATE_LIMIT_MAX=5
+REGISTER_RATE_LIMIT_WINDOW_MS=3600000
+REGISTER_RATE_LIMIT_MAX=5
+
 # Hosted database option, for example Neon or Render PostgreSQL
 DATABASE_URL=postgresql://username:password@host:5432/database?sslmode=require
 DB_SSL=true
@@ -300,6 +310,7 @@ Manual testing covers:
 * Editing existing transactions.
 * Deleting transactions.
 * Total income, total expense, and balance updates.
+* Rate limit responses for repeated authentication and API requests.
 * Deployment smoke testing through the live frontend and backend health endpoint.
 
 Automated product tests are planned as a future improvement. The highest-priority future tests are backend API tests for authentication and transaction endpoints, plus frontend integration tests for the protected dashboard flow.
@@ -321,7 +332,6 @@ Automated product tests are planned as a future improvement. The highest-priorit
 * Add transaction date selection.
 * Add charts for spending trends and category breakdowns.
 * Add pagination or “show more” for larger transaction histories.
-* Add rate limiting for authentication endpoints.
 * Refactor backend into separate route, middleware, controller, and utility files.
 
 ## Resume Bullet

@@ -1,6 +1,7 @@
 import bcrypt from "bcrypt";
 import jwt, { SignOptions } from "jsonwebtoken";
 import express, { Request, Response, NextFunction } from "express";
+import { rateLimit } from "express-rate-limit";
 import cors from "cors";
 import dotenv from "dotenv";
 import { pool } from "./db";
@@ -8,6 +9,15 @@ import { pool } from "./db";
 dotenv.config();
 
 const app = express();
+
+const trustProxyHops = Number(process.env.TRUST_PROXY_HOPS ?? 1);
+
+app.set(
+  "trust proxy",
+  Number.isInteger(trustProxyHops) && trustProxyHops >= 0
+    ? trustProxyHops
+    : 1,
+);
 
 const allowedOrigins = [
   "http://localhost:5173",
@@ -30,6 +40,48 @@ function isAllowedOrigin(origin: string) {
   );
 }
 
+function getPositiveIntegerEnv(name: string, fallback: number) {
+  const value = Number(process.env[name]);
+
+  return Number.isInteger(value) && value > 0 ? value : fallback;
+}
+
+const rateLimitMessage = {
+  message: "Too many requests. Please try again later.",
+};
+
+const apiLimiter = rateLimit({
+  windowMs: getPositiveIntegerEnv("API_RATE_LIMIT_WINDOW_MS", 15 * 60 * 1000),
+  limit: getPositiveIntegerEnv("API_RATE_LIMIT_MAX", 300),
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: rateLimitMessage,
+  skip: (req) => req.method === "OPTIONS" || req.path === "/health",
+});
+
+const loginLimiter = rateLimit({
+  windowMs: getPositiveIntegerEnv(
+    "LOGIN_RATE_LIMIT_WINDOW_MS",
+    15 * 60 * 1000,
+  ),
+  limit: getPositiveIntegerEnv("LOGIN_RATE_LIMIT_MAX", 5),
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: rateLimitMessage,
+  skipSuccessfulRequests: true,
+});
+
+const registerLimiter = rateLimit({
+  windowMs: getPositiveIntegerEnv(
+    "REGISTER_RATE_LIMIT_WINDOW_MS",
+    60 * 60 * 1000,
+  ),
+  limit: getPositiveIntegerEnv("REGISTER_RATE_LIMIT_MAX", 5),
+  standardHeaders: "draft-8",
+  legacyHeaders: false,
+  message: rateLimitMessage,
+});
+
 app.use(
   cors({
     origin(origin, callback) {
@@ -51,6 +103,8 @@ app.get("/api/health", (_req: Request, res: Response) => {
     timestamp: new Date().toISOString(),
   });
 });
+
+app.use("/api", apiLimiter);
 
 const JWT_SECRET = process.env.JWT_SECRET || "";
 
@@ -112,7 +166,7 @@ function verifyToken(req: AuthRequest, res: Response, next: NextFunction) {
 
 const port = Number(process.env.PORT) || 3000;
 
-app.post("/api/register", async (req, res) => {
+app.post("/api/register", registerLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
@@ -149,7 +203,7 @@ app.post("/api/register", async (req, res) => {
   }
 });
 
-app.post("/api/login", async (req, res) => {
+app.post("/api/login", loginLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
