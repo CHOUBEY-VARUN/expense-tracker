@@ -208,12 +208,22 @@ function Dashboard() {
         });
 
         if (!result.ok) {
-          navigate("/login");
+          if (result.status === 401) {
+            navigate("/login");
+            return;
+          }
+
+          const data = (await result
+            .json()
+            .catch(() => null)) as { message?: string } | null;
+
+          setError(data?.message || "Could not load dashboard data");
           return;
         }
 
         const data: DashboardData = await result.json();
 
+        setError("");
         setUser(data.user);
         setIncomes(data.incomes);
         setExpenses(data.expenses);

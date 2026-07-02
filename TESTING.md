@@ -20,6 +20,8 @@ Checklist:
 * A valid JWT is returned after successful registration or login.
 * The `/api/me` endpoint returns the authenticated user when a valid token is provided.
 * Protected endpoints reject requests with missing or invalid tokens.
+* Repeated invalid login attempts eventually return `429 Too Many Requests`.
+* Successful login attempts do not consume the failed-login rate limit budget.
 
 ### 2. Protected Frontend Routes
 
@@ -85,7 +87,19 @@ Endpoints to test:
 | `PUT`    | `/api/transactions/:id` | Updates a transaction                                    |
 | `DELETE` | `/api/transactions/:id` | Deletes a transaction                                    |
 
-### 7. Deployment Smoke Testing
+### 7. Rate Limiting
+
+Verify that API abuse controls work without blocking health checks.
+
+Checklist:
+
+* Repeated bad login attempts return `429 Too Many Requests` after the configured limit.
+* Successful login attempts do not consume the failed-login rate limit budget.
+* Repeated registration attempts return `429 Too Many Requests` after the configured limit.
+* Repeated authenticated `/api/transactions` requests eventually return `429 Too Many Requests` under the general API limit.
+* The `/api/health` endpoint continues returning `200 OK` and does not consume the general API limit.
+
+### 8. Deployment Smoke Testing
 
 Verify the deployed application after each important change.
 
