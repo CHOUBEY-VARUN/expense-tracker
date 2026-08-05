@@ -20,7 +20,7 @@ The backend is hosted on Render's free tier, so the first API request may take a
 
 ## Features
 
-* User registration and login.
+* User registration & login.
 * Password hashing with bcrypt.
 * JWT-based authentication.
 * Protected dashboard route.
