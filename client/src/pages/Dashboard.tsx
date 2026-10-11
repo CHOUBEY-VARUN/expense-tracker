@@ -3,6 +3,13 @@ import { useEffect, useState } from "react";
 import Logout from "../components/Logout";
 import API_BASE_URL from "../config/api";
 import DeleteBtn from "../components/DeleteBtn";
+import {
+  balanceProgressPercent,
+  formatMoney,
+  normalizeApiMoney,
+  type ApiMoneyValue,
+  type MoneyValue,
+} from "../lib/money";
 
 type User = {
   id: number;
@@ -13,23 +20,25 @@ type Transaction = {
   id: number;
   type: "income" | "expense";
   title: string;
-  amount: number;
+  amount: MoneyValue;
   category: string | null;
   transaction_date: string;
   created_at: string;
 };
 
 type Totals = {
-  income: number;
-  expense: number;
-  balance: number;
+  income: MoneyValue;
+  expense: MoneyValue;
+  balance: MoneyValue;
 };
 
-type DashboardData = {
+type ApiTransaction = Omit<Transaction, "amount"> & { amount: ApiMoneyValue };
+
+type ApiDashboardData = {
   user: User;
-  incomes: Transaction[];
-  expenses: Transaction[];
-  totals: Totals;
+  incomes: ApiTransaction[];
+  expenses: ApiTransaction[];
+  totals: { income: ApiMoneyValue; expense: ApiMoneyValue; balance: ApiMoneyValue };
 };
 
 type TransactionFormErrors = {
@@ -38,6 +47,18 @@ type TransactionFormErrors = {
   amount?: string;
   category?: string;
 };
+
+const MAX_AMOUNT_CENTS = 99_999_999_999_999n;
+
+function toCents(amount: string): bigint {
+  const [whole, fraction = ""] = amount.replace(/^-/, "").split(".");
+  const cents = BigInt(whole || "0") * 100n + BigInt(fraction.padEnd(2, "0").slice(0, 2));
+  return amount.startsWith("-") ? -cents : cents;
+}
+
+function isValidAmount(amount: string): boolean {
+  return /^\d+(?:\.\d{1,2})?$/.test(amount) && toCents(amount) > 0n && toCents(amount) <= MAX_AMOUNT_CENTS;
+}
 
 function Dashboard() {
   const navigate = useNavigate();
@@ -63,20 +84,14 @@ function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const targetBalance = 10000;
-
-  const currentBalance = totals?.balance ?? 0;
-
-  const balanceProgressRaw = Math.min(
-    Math.max((currentBalance / targetBalance) * 100, 0),
-    100,
+  const targetBalance = normalizeApiMoney("10000.00");
+  const balanceProgress = balanceProgressPercent(
+    totals?.balance ?? normalizeApiMoney("0"),
+    targetBalance,
   );
-
-  const balanceProgress = Math.floor(balanceProgressRaw);
 
   const validateTransactionForm = () => {
     const errors: TransactionFormErrors = {};
-    const numericAmount = Number(amount);
 
     if (!type) {
       errors.type = "Choose income or expense.";
@@ -88,8 +103,8 @@ function Dashboard() {
 
     if (!amount.trim()) {
       errors.amount = "Amount is required.";
-    } else if (!Number.isFinite(numericAmount) || numericAmount <= 0) {
-      errors.amount = "Amount must be greater than 0.";
+    } else if (!isValidAmount(amount)) {
+      errors.amount = "Enter an amount from 0.01 to 999999999999.99, with up to 2 decimal places.";
     }
 
     if (!category) {
@@ -114,7 +129,7 @@ function Dashboard() {
     setEditingTransaction(transaction);
     setType(transaction.type);
     setTitle(transaction.title);
-    setAmount(String(transaction.amount));
+    setAmount(transaction.amount.decimal);
     setCategory(transaction.category ?? "");
     setFormErrors({});
     setFormMessage("");
@@ -159,13 +174,26 @@ function Dashboard() {
         },
       );
 
-      const data = await result.json();
+      let data: { message?: string } | null = null;
+      try {
+        const responseBody: unknown = await result.json();
+        if (
+          typeof responseBody === "object" &&
+          responseBody !== null &&
+          "message" in responseBody &&
+          typeof responseBody.message === "string"
+        ) {
+          data = { message: responseBody.message };
+        }
+      } catch {
+        // Keep the HTTP status handling useful when a proxy returns non-JSON.
+      }
 
       if (!result.ok) {
         setFormMessageType("error");
         setFormMessage(
-          data.message ||
-            `Could not ${isEditing ? "update" : "add"} transaction. Please try again.`,
+          data?.message ||
+            `The server could not ${isEditing ? "update" : "add"} this transaction. Please try again or contact support.`,
         );
         return;
       }
@@ -221,13 +249,23 @@ function Dashboard() {
           return;
         }
 
-        const data: DashboardData = await result.json();
+        const data: ApiDashboardData = await result.json();
 
         setError("");
         setUser(data.user);
-        setIncomes(data.incomes);
-        setExpenses(data.expenses);
-        setTotals(data.totals);
+        setIncomes(data.incomes.map((transaction) => ({
+          ...transaction,
+          amount: normalizeApiMoney(transaction.amount),
+        })));
+        setExpenses(data.expenses.map((transaction) => ({
+          ...transaction,
+          amount: normalizeApiMoney(transaction.amount),
+        })));
+        setTotals({
+          income: normalizeApiMoney(data.totals.income),
+          expense: normalizeApiMoney(data.totals.expense),
+          balance: normalizeApiMoney(data.totals.balance),
+        });
       } catch {
         setError("Could not load dashboard data");
       } finally {
@@ -238,9 +276,7 @@ function Dashboard() {
     getDashboardData();
   }, [navigate, refreshKey]);
 
-  const formatAmount = (amount: number) => {
-    return `₹${amount.toFixed(2)}`;
-  };
+  const formatAmount = (amount: MoneyValue) => formatMoney(amount);
 
   const formatTransactionDate = (date: string) => {
     const dateOnly = date.slice(0, 10);
@@ -299,17 +335,17 @@ function Dashboard() {
       <section className="summary-grid" aria-label="Balance summary">
         <article className="metric-card metric-card-income">
           <span>Total Income</span>
-          <strong>{formatAmount(totals?.income ?? 0)}</strong>
+          <strong>{formatAmount(totals?.income ?? normalizeApiMoney("0"))}</strong>
         </article>
 
         <article className="metric-card metric-card-expense">
           <span>Total Expenses</span>
-          <strong>{formatAmount(totals?.expense ?? 0)}</strong>
+          <strong>{formatAmount(totals?.expense ?? normalizeApiMoney("0"))}</strong>
         </article>
 
         <article className="metric-card metric-card-balance">
           <span>Current Balance</span>
-          <strong>{formatAmount(totals?.balance ?? 0)}</strong>
+          <strong>{formatAmount(totals?.balance ?? normalizeApiMoney("0"))}</strong>
         </article>
 
         <article className="metric-card goal-card">
@@ -399,11 +435,11 @@ function Dashboard() {
           <label className="form-field">
             <span>Amount</span>
             <input
-              type="number"
+              type="text"
               name="amount"
+              inputMode="decimal"
               value={amount}
-              min="0"
-              step="0.01"
+              autoComplete="off"
               aria-invalid={formErrors.amount ? "true" : "false"}
               onChange={(e) => {
                 setAmount(e.target.value);
@@ -473,7 +509,8 @@ function Dashboard() {
           {incomes.length === 0 ? (
             <p className="empty-state">No income transactions yet.</p>
           ) : (
-            <div className="table-wrap">
+            <>
+              <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
@@ -511,7 +548,15 @@ function Dashboard() {
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
+              <div className="transaction-card-list">
+                {incomes.map((income) => <article className="transaction-card" key={income.id}>
+                  <div className="transaction-card-heading"><strong>{income.title}</strong><strong>{formatAmount(income.amount)}</strong></div>
+                  <dl><div><dt>Category</dt><dd>{income.category ?? "Uncategorized"}</dd></div><div><dt>Date</dt><dd>{formatTransactionDate(income.transaction_date)}</dd></div></dl>
+                  <div className="transaction-card-actions"><button type="button" className="button-secondary" onClick={() => startEditingTransaction(income)}>Edit</button><DeleteBtn transactionId={income.id} onDeleted={() => setRefreshKey((current) => current + 1)} /></div>
+                </article>)}
+              </div>
+            </>
           )}
         </section>
 
@@ -524,7 +569,8 @@ function Dashboard() {
           {expenses.length === 0 ? (
             <p className="empty-state">No expense transactions yet.</p>
           ) : (
-            <div className="table-wrap">
+            <>
+              <div className="table-wrap">
               <table>
                 <thead>
                   <tr>
@@ -562,7 +608,15 @@ function Dashboard() {
                   ))}
                 </tbody>
               </table>
-            </div>
+              </div>
+              <div className="transaction-card-list">
+                {expenses.map((expense) => <article className="transaction-card" key={expense.id}>
+                  <div className="transaction-card-heading"><strong>{expense.title}</strong><strong>{formatAmount(expense.amount)}</strong></div>
+                  <dl><div><dt>Category</dt><dd>{expense.category ?? "Uncategorized"}</dd></div><div><dt>Date</dt><dd>{formatTransactionDate(expense.transaction_date)}</dd></div></dl>
+                  <div className="transaction-card-actions"><button type="button" className="button-secondary" onClick={() => startEditingTransaction(expense)}>Edit</button><DeleteBtn transactionId={expense.id} onDeleted={() => setRefreshKey((current) => current + 1)} /></div>
+                </article>)}
+              </div>
+            </>
           )}
         </section>
       </div>

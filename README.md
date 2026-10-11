@@ -83,7 +83,7 @@ Render-hosted Express API
 PostgreSQL / Neon database
 ```
 
-The frontend stores the JWT after login and sends it with protected API requests. The backend verifies the token, identifies the authenticated user, and only returns or modifies transactions belonging to that user.
+The frontend stores the JWT after login and sends it with protected API requests. The backend verifies the token, identifies the authenticated user, and only returns or modifies transactions belonging to that user. Transaction amounts are returned as decimal strings to preserve exact precision. The supported amount range is ₹0.01 to ₹999,999,999,999.99, with at most two decimal places. Apply `server/migrations/001_transaction_amount_precision.sql` to the production database before deploying this range; the migration preserves existing values and fails safely if a value does not fit.
 
 ## API Overview
 

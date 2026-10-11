@@ -3,11 +3,12 @@
   "private": true,
   "version": "0.0.0",
   "type": "module",
- "scripts": {
+  "scripts": {
   "dev": "vite",
   "build": "tsc -b && vite build",
   "lint": "eslint .",
   "typecheck": "tsc -b",
+  "test": "node --experimental-strip-types --test tests/money.test.mjs",
   "preview": "vite preview"
 },
   "dependencies": {
