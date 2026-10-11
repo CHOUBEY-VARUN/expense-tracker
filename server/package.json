@@ -2,7 +2,13 @@
   "scripts": {
     "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
     "build": "tsc",
-    "test": "npm run build && node --test dist/amount.test.js dist/transactionErrors.test.js",
+"scripts": {
+  "dev": "ts-node-dev --respawn --transpile-only src/index.ts",
+  "build": "tsc",
+  "test": "npm run build && node --test dist/amount.test.js dist/transactionErrors.test.js",
+  "lint": "tsc --noEmit",
+  "typecheck": "tsc --noEmit",
+  "start": "node dist/index.js"
     "lint": "tsc --noEmit",
     "typecheck": "tsc --noEmit",
     "start": "node dist/index.js"
