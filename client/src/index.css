@@ -205,6 +205,13 @@ tbody tr:last-child td {
   animation: fade-in 320ms ease both;
 }
 
+.dashboard-page,
+.summary-grid > *,
+.dashboard-content > *,
+.transaction-form > * {
+  min-width: 0;
+}
+
 .dashboard-header {
   display: flex;
   align-items: flex-start;
@@ -319,6 +326,7 @@ tbody tr:last-child td {
   color: var(--text);
   font-size: 25px;
   line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
 .goal-card {
@@ -389,6 +397,59 @@ tbody tr:last-child td {
 
 .table-wrap {
   overflow-x: auto;
+}
+
+.transaction-card-list {
+  display: none;
+}
+
+.transaction-card {
+  padding: 16px;
+  border-bottom: 1px solid rgba(48, 52, 61, 0.78);
+}
+
+.transaction-card:last-child {
+  border-bottom: 0;
+}
+
+.transaction-card-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  overflow-wrap: anywhere;
+}
+
+.transaction-card-heading strong:last-child {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.transaction-card dl {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 14px 0;
+}
+
+.transaction-card dl > div {
+  overflow-wrap: anywhere;
+}
+
+.transaction-card dt {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.transaction-card dd {
+  margin: 2px 0 0;
+  color: var(--text-soft);
+}
+
+.transaction-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .empty-state {
@@ -887,10 +948,16 @@ button:disabled {
     font-size: 52px;
   }
 
-  .summary-grid,
-  .dashboard-content,
-  .transaction-form {
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .dashboard-content {
     grid-template-columns: 1fr;
+  }
+
+  .transaction-form {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -909,6 +976,11 @@ button:disabled {
   .dashboard-header {
     flex-direction: column;
     gap: 16px;
+  }
+
+  .dashboard-header h1 {
+    font-size: clamp(34px, 11vw, 42px);
+    overflow-wrap: anywhere;
   }
 
   .logout-actions,
@@ -942,7 +1014,7 @@ button:disabled {
   }
 
   .home-highlights {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .preview-balance strong {
@@ -960,7 +1032,7 @@ button:disabled {
   }
 
   .type-toggle {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .transaction-form-actions {
@@ -972,8 +1044,49 @@ button:disabled {
     width: 100%;
   }
 
-  th,
-  td {
-    padding: 13px 14px;
+  .table-wrap {
+    display: none;
+  }
+
+  .transaction-card-list {
+    display: block;
+  }
+
+  .panel-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .transaction-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .metric-card strong {
+    font-size: clamp(19px, 6vw, 25px);
+  }
+
+  .home-hero h1 {
+    font-size: clamp(34px, 10vw, 42px);
+    overflow-wrap: anywhere;
+  }
+
+  .highlight-card strong {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 380px) {
+  .summary-grid,
+  .home-highlights {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .transaction-card-heading {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .transaction-card-heading strong:last-child {
+    text-align: left;
   }
 }

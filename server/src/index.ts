@@ -5,6 +5,8 @@ import { rateLimit } from "express-rate-limit";
 import cors from "cors";
 import dotenv from "dotenv";
 import { pool } from "./db";
+import { centsToAmount, parseAmount, sumAmounts, subtractAmounts } from "./amount";
+import { transactionWriteErrorMessage } from "./transactionErrors";
 
 dotenv.config();
 
@@ -282,7 +284,7 @@ app.get(
 
       const transactions = result.rows.map((transaction) => ({
         ...transaction,
-        amount: Number(transaction.amount),
+        amount: String(transaction.amount),
       }));
 
       const incomes = transactions.filter(
@@ -293,13 +295,9 @@ app.get(
         (transaction) => transaction.type === "expense",
       );
 
-      const totalIncome = incomes.reduce((sum, transaction) => {
-        return sum + transaction.amount;
-      }, 0);
-
-      const totalExpenses = expenses.reduce((sum, transaction) => {
-        return sum + transaction.amount;
-      }, 0);
+      const totalIncome = sumAmounts(incomes.map((transaction) => transaction.amount));
+      const totalExpenses = sumAmounts(expenses.map((transaction) => transaction.amount));
+      const totalBalance = subtractAmounts(totalIncome, totalExpenses);
 
       return res.json({
         user: req.user,
@@ -308,7 +306,7 @@ app.get(
         totals: {
           income: totalIncome,
           expense: totalExpenses,
-          balance: totalIncome - totalExpenses,
+          balance: totalBalance,
         },
       });
     } catch (error) {
@@ -327,7 +325,21 @@ app.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const { type, title, amount, category } = req.body;
-      const numAmount = Number(amount);
+      const amountCents = parseAmount(amount);
+
+      if (type !== "income" && type !== "expense") {
+        return res.status(400).json({ message: "Transaction type must be income or expense." });
+      }
+      if (!title || !String(title).trim()) {
+        return res.status(400).json({ message: "Title is required." });
+      }
+      if (amountCents === null) {
+        return res.status(400).json({ message: "Amount must be greater than 0 and no more than ₹999999999999.99, with up to 2 decimal places." });
+      }
+      if (!category || !String(category).trim()) {
+        return res.status(400).json({ message: "Category is required." });
+      }
+      const amountValue = centsToAmount(amountCents);
 
       const result = await pool.query(
         `
@@ -343,16 +355,16 @@ app.post(
           to_char(transaction_date, 'YYYY-MM-DD') AS transaction_date,
           created_at
         `,
-        [req.user?.id, title, numAmount, type, category],
+        [req.user?.id, String(title).trim(), amountValue, type, String(category).trim()],
       );
       res.status(200).json({
         message: "transaction added successfully",
-        transaction: result.rows[0],
+        transaction: { ...result.rows[0], amount: String(result.rows[0].amount) },
       });
     } catch (error) {
-      console.error(error);
+      console.error("Transaction creation failed", error);
       res.status(500).json({
-        message: "Something went wrong.",
+        message: transactionWriteErrorMessage(error),
       });
     }
   },
@@ -366,7 +378,7 @@ app.put(
       const transactionId = req.params.id;
       const userId = req.user?.id;
       const { type, title, amount, category } = req.body;
-      const numAmount = Number(amount);
+      const amountCents = parseAmount(amount);
 
       if (type !== "income" && type !== "expense") {
         return res.status(400).json({
@@ -380,9 +392,9 @@ app.put(
         });
       }
 
-      if (!Number.isFinite(numAmount) || numAmount <= 0) {
+      if (amountCents === null) {
         return res.status(400).json({
-          message: "Amount must be greater than 0.",
+          message: "Amount must be greater than 0 and no more than ₹999999999999.99, with up to 2 decimal places.",
         });
       }
 
@@ -413,7 +425,7 @@ app.put(
         `,
         [
           String(title).trim(),
-          numAmount,
+          centsToAmount(amountCents),
           type,
           String(category).trim(),
           transactionId,
@@ -431,13 +443,13 @@ app.put(
         message: "transaction updated successfully",
         transaction: {
           ...result.rows[0],
-          amount: Number(result.rows[0].amount),
+          amount: String(result.rows[0].amount),
         },
       });
     } catch (error) {
-      console.error(error);
+      console.error("Transaction update failed", error);
       return res.status(500).json({
-        message: "Something went wrong.",
+        message: transactionWriteErrorMessage(error),
       });
     }
   },

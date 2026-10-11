@@ -4,6 +4,8 @@ This document outlines the current manual testing checklist and future automated
 
 The project currently uses manual product testing plus automated CI validation through GitHub Actions. Automated product tests are planned as a future improvement.
 
+The backend also includes amount validation and exact arithmetic regression tests. Run them with `cd server && npm test`; these cover normal and maximum amounts, decimal precision, malformed/out-of-range values, and exact totals. They do not replace API/database integration tests.
+
 ## Current Testing Coverage
 
 ### 1. Authentication
